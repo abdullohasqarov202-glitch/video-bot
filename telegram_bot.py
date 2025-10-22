@@ -1,30 +1,51 @@
-# web.py
+# telegram_bot.py
 import os
 from flask import Flask, request
 import telebot
+import yt_dlp
 
-TOKEN = os.environ.get("TELEGRAM_TOKEN")  # Render dashboard -> Environment -> add TELEGRAM_TOKEN
-if not TOKEN:
+# TELEGRAM_TOKEN muhit o'zgaruvchisini o'rnatish
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
+if not TELEGRAM_TOKEN:
     raise RuntimeError("TELEGRAM_TOKEN muhit o'zgaruvchisi aniqlanmadi")
 
-bot = telebot.TeleBot(TOKEN, threaded=False)  # threaded=False muhim (gunicorn bilan yaxshi ishlaydi)
+bot = telebot.TeleBot(TELEGRAM_TOKEN)
 app = Flask(__name__)
 
-# --- Bu yerga bot handlerlarini qo'shing (xuddi telegram_bot.py ichidagi handlerlar) ---
-@bot.message_handler(commands=["start"])
-def start_msg(message):
-    bot.reply_to(message, "Salom! Bot ishga tushdi.")
+# Start / Help buyrug‘i
+@bot.message_handler(commands=['start', 'help'])
+def send_welcome(message):
+    bot.reply_to(message, "Assalomu alaykum! Video yuboring, men uni yuklab beraman.")
 
-# boshqa handlerlar...
-# -------------------------------------------------------------------------------
+# Video URL qabul qilish
+@bot.message_handler(func=lambda message: True)
+def download_video(message):
+    url = message.text.strip()
+    bot.reply_to(message, "Video yuklanmoqda, biroz kuting...")
 
-@app.route("/"+TOKEN, methods=["POST"])
+    try:
+        ydl_opts = {
+            'format': 'best',
+            'outtmpl': '/tmp/%(title)s.%(ext)s',
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            filename = ydl.prepare_filename(info)
+        with open(filename, 'rb') as video:
+            bot.send_video(message.chat.id, video)
+    except Exception as e:
+        bot.reply_to(message, f"Xatolik yuz berdi: {e}")
+
+# Telegram Webhook endpoint
+@app.route(f"/{TELEGRAM_TOKEN}", methods=['POST'])
 def webhook():
-    json_str = request.get_data().decode("utf-8")
+    json_str = request.get_data().decode('UTF-8')
     update = telebot.types.Update.de_json(json_str)
     bot.process_new_updates([update])
-    return "", 200
+    return "!", 200
 
+# Flask ishlashi
 if __name__ == "__main__":
-    PORT = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=PORT)
+    # Render yoki boshqa server uchun 0.0.0.0 va PORT ishlatamiz
+    PORT = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=PORT)
