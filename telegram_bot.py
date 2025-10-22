@@ -19,22 +19,35 @@ def start(message):
     if is_subscribed(message.from_user.id):
         bot.reply_to(message, "👋 Salom! Menga Instagram, TikTok yoki YouTube link yubor — men video yuklab beraman 🎥")
     else:
-        markup = telebot.types.InlineKeyboardMarkup()
-        btn = telebot.types.InlineKeyboardButton("✅ Kanalga obuna bo‘lish", url=f"https://t.me/{CHANNEL_ID[1:]}")
-        markup.add(btn)
-        bot.send_message(
-            message.chat.id,
-            "❌ Siz hali kanalga obuna bo‘lmagansiz!\n\nIltimos, avval kanalga obuna bo‘ling, so‘ngra /start bosing 🔄",
-            reply_markup=markup
+        send_subscribe_message(message.chat.id)
+
+def send_subscribe_message(chat_id):
+    markup = telebot.types.InlineKeyboardMarkup()
+    btn_join = telebot.types.InlineKeyboardButton("✅ Kanalga obuna bo‘lish", url=f"https://t.me/{CHANNEL_ID[1:]}")
+    btn_check = telebot.types.InlineKeyboardButton("♻️ Tekshirish", callback_data="check_subscribe")
+    markup.add(btn_join)
+    markup.add(btn_check)
+    bot.send_message(
+        chat_id,
+        "❌ Siz hali kanalga obuna bo‘lmagansiz!\n\nIltimos, kanalga obuna bo‘ling va keyin ♻️ Tekshirish tugmasini bosing.",
+        reply_markup=markup
+    )
+
+@bot.callback_query_handler(func=lambda call: call.data == "check_subscribe")
+def check_subscription(call):
+    if is_subscribed(call.from_user.id):
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            text="✅ Rahmat! Siz kanalga obuna bo‘ldingiz.\nEndi menga video link yuboring 🎥"
         )
+    else:
+        bot.answer_callback_query(call.id, "❌ Hali ham obuna bo‘lmagansiz!", show_alert=True)
 
 @bot.message_handler(func=lambda msg: True)
 def download(message):
     if not is_subscribed(message.from_user.id):
-        markup = telebot.types.InlineKeyboardMarkup()
-        btn = telebot.types.InlineKeyboardButton("✅ Kanalga obuna bo‘lish", url=f"https://t.me/{CHANNEL_ID[1:]}")
-        markup.add(btn)
-        bot.send_message(message.chat.id, "❌ Avval kanalga obuna bo‘ling!", reply_markup=markup)
+        send_subscribe_message(message.chat.id)
         return
 
     url = message.text.strip()
