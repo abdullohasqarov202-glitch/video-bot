@@ -1,2 +1,7 @@
 pyTelegramBotAPI
 yt-dlp
+Flask
+pyTelegramBotAPI
+gunicorn
+yt-dlp
+# va boshqa kerakli paketlar (browser_cookie3, etc.)
