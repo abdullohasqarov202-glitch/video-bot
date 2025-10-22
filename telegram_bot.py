@@ -1,67 +1,30 @@
+# web.py
 import os
+from flask import Flask, request
 import telebot
-import yt_dlp
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHANNEL_ID = "@Asqarov_2007"  # 👈 bu yerga o'z kanal username’ni yoz ( @ bilan )
+TOKEN = os.environ.get("TELEGRAM_TOKEN")  # Render dashboard -> Environment -> add TELEGRAM_TOKEN
+if not TOKEN:
+    raise RuntimeError("TELEGRAM_TOKEN muhit o'zgaruvchisi aniqlanmadi")
 
-bot = telebot.TeleBot(BOT_TOKEN)
+bot = telebot.TeleBot(TOKEN, threaded=False)  # threaded=False muhim (gunicorn bilan yaxshi ishlaydi)
+app = Flask(__name__)
 
-def is_subscribed(user_id):
-    try:
-        member = bot.get_chat_member(CHANNEL_ID, user_id)
-        return member.status in ["member", "administrator", "creator"]
-    except:
-        return False
+# --- Bu yerga bot handlerlarini qo'shing (xuddi telegram_bot.py ichidagi handlerlar) ---
+@bot.message_handler(commands=["start"])
+def start_msg(message):
+    bot.reply_to(message, "Salom! Bot ishga tushdi.")
 
-@bot.message_handler(commands=['start'])
-def start(message):
-    if is_subscribed(message.from_user.id):
-        bot.reply_to(message, "👋 Salom! Menga Instagram, TikTok yoki YouTube link yubor — men video yuklab beraman 🎥")
-    else:
-        send_subscribe_message(message.chat.id)
+# boshqa handlerlar...
+# -------------------------------------------------------------------------------
 
-def send_subscribe_message(chat_id):
-    markup = telebot.types.InlineKeyboardMarkup()
-    btn_join = telebot.types.InlineKeyboardButton("✅ Kanalga obuna bo‘lish", url=f"https://t.me/{CHANNEL_ID[1:]}")
-    btn_check = telebot.types.InlineKeyboardButton("♻️ Tekshirish", callback_data="check_subscribe")
-    markup.add(btn_join)
-    markup.add(btn_check)
-    bot.send_message(
-        chat_id,
-        "❌ Siz hali kanalga obuna bo‘lmagansiz!\n\nIltimos, kanalga obuna bo‘ling va keyin ♻️ Tekshirish tugmasini bosing.",
-        reply_markup=markup
-    )
+@app.route("/"+TOKEN, methods=["POST"])
+def webhook():
+    json_str = request.get_data().decode("utf-8")
+    update = telebot.types.Update.de_json(json_str)
+    bot.process_new_updates([update])
+    return "", 200
 
-@bot.callback_query_handler(func=lambda call: call.data == "check_subscribe")
-def check_subscription(call):
-    if is_subscribed(call.from_user.id):
-        bot.edit_message_text(
-            chat_id=call.message.chat.id,
-            message_id=call.message.message_id,
-            text="✅ Rahmat! Siz kanalga obuna bo‘ldingiz.\nEndi menga video link yuboring 🎥"
-        )
-    else:
-        bot.answer_callback_query(call.id, "❌ Hali ham obuna bo‘lmagansiz!", show_alert=True)
-
-@bot.message_handler(func=lambda msg: True)
-def download(message):
-    if not is_subscribed(message.from_user.id):
-        send_subscribe_message(message.chat.id)
-        return
-
-    url = message.text.strip()
-    bot.reply_to(message, "⏳ Yuklanmoqda, kuting...")
-
-    try:
-        ydl_opts = {'outtmpl': 'video.mp4', 'format': 'mp4', 'quiet': True}
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
-        with open("video.mp4", "rb") as video:
-            bot.send_video(message.chat.id, video)
-        os.remove("video.mp4")
-    except Exception as e:
-        bot.reply_to(message, f"❌ Xatolik: {e}")
-
-print("✅ Bot ishga tushdi!")
-bot.infinity_polling()
+if __name__ == "__main__":
+    PORT = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=PORT)
