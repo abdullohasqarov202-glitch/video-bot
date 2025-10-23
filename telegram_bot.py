@@ -87,12 +87,10 @@ def download_video(message):
         bot.reply_to(message, f"❌ Xatolik: {e}")
 
 # 6️⃣ Flask webhook yo‘li
-@app.route(f'/{TELEGRAM_TOKEN}', methods=['POST'])
-def receive_update():
-    json_str = request.get_data().decode('utf-8')
-    update = telebot.types.Update.de_json(json_str)
-    bot.process_new_updates([update])
-    return "OK", 200
+@app.route("/", methods=["GET"])
+def home():
+    return "<h2>✅ Bot server ishlayapti!</h2><p>Video bot Render serverda muvaffaqiyatli ishga tushdi.</p>"
+
 
 # 7️⃣ Asosiy ishga tushirish
 if __name__ == "__main__":
