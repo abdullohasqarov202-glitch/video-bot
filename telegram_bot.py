@@ -55,7 +55,7 @@ def send_welcome(message):
 # 4️⃣ Tugma tanlanganda
 @bot.message_handler(func=lambda message: message.text == "📩 Admin bilan aloqa")
 def contact_admin(message):
-    bot.reply_to(message, "Admin bilan aloqa uchun: @SizningAdminNickingiz")
+    bot.reply_to(message, "Admin bilan aloqa uchun: @Asqarov_0207")
 
 @bot.message_handler(func=lambda message: message.text == "🎨 Rasm yasash")
 def make_image(message):
