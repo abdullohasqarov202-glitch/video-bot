@@ -117,6 +117,7 @@ def download_video(message):
 
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
+            # 🎥 Videoni yuklab olish
             ydl_opts = {
                 'outtmpl': f'{tmpdir}/%(title)s.%(ext)s',
                 'cookiefile': COOKIE_FILE,
@@ -129,8 +130,37 @@ def download_video(message):
                 info = ydl.extract_info(url, download=True)
                 video_path = ydl.prepare_filename(info)
 
+            # 🎶 Qo‘shiq nomi, ijrochi va bot havolasi
+            title = info.get('title', 'Noma’lum qo‘shiq 🎵')
+            artist = info.get('uploader', 'Noma’lum ijrochi')
+            BOT_LINK = "https://t.me/Asqarov_2007_bot"
+
+            caption = f"🎶 <b>{title}</b>\n👤 {artist}\n\n📲 Yuklab beruvchi bot: <a href='{BOT_LINK}'>@Asqarov_2007_bot</a>"
+
+            # 🎥 Videoni yuboramiz
             with open(video_path, 'rb') as video:
-                bot.send_video(message.chat.id, video)
+                bot.send_video(message.chat.id, video, caption=caption, parse_mode="HTML")
+
+            # 🎧 Musiqani ham yuklab yuboramiz
+            audio_opts = {
+                'outtmpl': f'{tmpdir}/%(title)s.%(ext)s',
+                'cookiefile': COOKIE_FILE,
+                'format': 'bestaudio/best',
+                'quiet': True,
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': '192',
+                }],
+            }
+
+            with yt_dlp.YoutubeDL(audio_opts) as ydl_audio:
+                audio_info = ydl_audio.extract_info(url, download=True)
+                audio_path = ydl_audio.prepare_filename(audio_info)
+                audio_path = audio_path.replace('.webm', '.mp3').replace('.m4a', '.mp3')
+
+            with open(audio_path, 'rb') as audio:
+                bot.send_audio(message.chat.id, audio, title=title, performer=artist)
 
     except Exception as e:
         bot.reply_to(message, f"❌ Xatolik: {e}")
@@ -146,7 +176,7 @@ def webhook():
 # 9️⃣ Asosiy sahifa
 @app.route("/", methods=["GET"])
 def home():
-    return "<h2>✅ Bot server ishlayapti!</h2><p>Render orqali ishga tushgan video bot.</p>"
+    return "<h2>✅ Bot server ishlayapti!</h2><p>Render orqali ishga tushgan video va musiqa yuklab beruvchi bot.</p>"
 
 # 🔟 Flaskni ishga tushirish
 if __name__ == "__main__":
