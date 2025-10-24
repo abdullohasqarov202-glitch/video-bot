@@ -3,6 +3,7 @@ from flask import Flask, request
 import telebot
 import yt_dlp
 import tempfile
+import re
 
 # 1️⃣ Telegram token
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
@@ -103,13 +104,14 @@ def search_and_download_song(message):
 
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
+            safe_name = re.sub(r'[\\/*?:"<>|#]', "", query)
             opts = {
                 'quiet': True,
                 'noplaylist': True,
                 'cookiefile': COOKIE_FILE,
                 'default_search': 'ytsearch1',
                 'format': 'bestaudio/best',
-                'outtmpl': os.path.join(tmpdir, '%(title)s.%(ext)s'),
+                'outtmpl': os.path.join(tmpdir, f'{safe_name}.%(ext)s'),
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
@@ -123,7 +125,7 @@ def search_and_download_song(message):
                     info = info['entries'][0]
                 filename = ydl.prepare_filename(info).replace('.webm', '.mp3').replace('.m4a', '.mp3')
 
-            caption = f"🎶 <b>{info.get('title')}</b>\n📲 Yuklab beruvchi: <a href='https://t.me/Asqarov_2007_bot'>@Asqarov_2007_bot</a>"
+            caption = f"🎶 <b>{info.get('title')}</b>\n📲 Yuklab beruvchi: <a href='https://t.me/@asqarov_uzbot'>@asqarov_uzbot</a>"
             with open(filename, 'rb') as f:
                 bot.send_audio(message.chat.id, f, caption=caption, parse_mode='HTML')
 
@@ -143,8 +145,9 @@ def download_video(message):
 
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
+            safe_name = re.sub(r'[\\/*?:"<>|#]', "", url[-30:])
             video_opts = {
-                'outtmpl': os.path.join(tmpdir, '%(title)s.%(ext)s'),
+                'outtmpl': os.path.join(tmpdir, f'{safe_name}.%(ext)s'),
                 'cookiefile': COOKIE_FILE,
                 'format': 'bestvideo+bestaudio/best',
                 'quiet': True,
@@ -155,13 +158,13 @@ def download_video(message):
                 info = ydl.extract_info(url, download=True)
                 video_path = ydl.prepare_filename(info)
 
-            caption = f"🎬 <b>{info.get('title')}</b>\n📲 Yuklab beruvchi: <a href='https://t.me/@asqarov_uzbot'>@asqarov_uzbot</a>"
+            caption = f"🎬 <b>{info.get('title')}</b>\n📲 Yuklab beruvchi: <a href='https://t.me/asqarov_uzbot'>@asqarov_uzbot</a>"
             with open(video_path, 'rb') as v:
                 bot.send_video(message.chat.id, v, caption=caption, parse_mode='HTML')
 
             # 🎧 Musiqa
             audio_opts = {
-                'outtmpl': os.path.join(tmpdir, '%(title)s.%(ext)s'),
+                'outtmpl': os.path.join(tmpdir, f'{safe_name}.%(ext)s'),
                 'cookiefile': COOKIE_FILE,
                 'format': 'bestaudio/best',
                 'quiet': True,
@@ -199,4 +202,3 @@ def home():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
-
