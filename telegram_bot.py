@@ -15,17 +15,42 @@ app = Flask(__name__)
 # 2️⃣ Cookie fayl (shu fayl papkada bo‘lishi shart!)
 COOKIE_FILE = "cookies.txt"
 
+# 3️⃣ Kanal username (shu joyni o‘zingiznikiga o‘zgartiring)
+CHANNEL_USERNAME = "@Asqarov_2007"
+
 # Referal tizimi uchun oddiy xotira
 user_referrals = {}
 user_balances = {}
 
-# 3️⃣ Start / help
+# ✅ Obuna tekshirish funksiyasi
+def is_subscribed(user_id):
+    try:
+        member = bot.get_chat_member(CHANNEL_USERNAME, user_id)
+        return member.status in ['member', 'administrator', 'creator']
+    except Exception:
+        return False
+
+# 4️⃣ Start / help
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
     user_id = message.chat.id
     args = message.text.split()
 
-    # referal tizimi
+    # 🔍 Avval kanal obunasini tekshiramiz
+    if not is_subscribed(user_id):
+        markup = telebot.types.InlineKeyboardMarkup()
+        markup.add(
+            telebot.types.InlineKeyboardButton("📢 Kanalga obuna bo‘lish", url=f"https://t.me/{CHANNEL_USERNAME[1:]}"),
+            telebot.types.InlineKeyboardButton("✅ Obunani tekshirish", callback_data="check_sub")
+        )
+        bot.send_message(
+            user_id,
+            f"👋 Assalomu alaykum!\n\nBotdan foydalanish uchun iltimos quyidagi kanalga obuna bo‘ling:\n{CHANNEL_USERNAME}",
+            reply_markup=markup
+        )
+        return  # Obuna bo‘lmaguncha pastdagi menyuni ko‘rsatmaydi
+
+    # ✅ Agar obuna bo‘lgan bo‘lsa, menyu chiqadi:
     if len(args) > 1:
         referrer_id = args[1]
         if referrer_id != str(user_id):
@@ -43,11 +68,21 @@ def send_welcome(message):
 
     bot.send_message(
         user_id,
-        "👋 Assalomu alaykum!\nPastdagi tugmalardan birini tanlang:",
+        "✅ Tabriklaymiz! Siz kanalga obuna bo‘lgansiz.\nQuyidagi menyudan tanlang:",
         reply_markup=markup
     )
 
-# 4️⃣ Tugmalar
+# 5️⃣ Obunani qayta tekshirish tugmasi
+@bot.callback_query_handler(func=lambda call: call.data == "check_sub")
+def check_subscription(call):
+    user_id = call.message.chat.id
+    if is_subscribed(user_id):
+        bot.edit_message_text("✅ Obuna muvaffaqiyatli tasdiqlandi!", chat_id=user_id, message_id=call.message.message_id)
+        send_welcome(call.message)
+    else:
+        bot.answer_callback_query(call.id, "🚫 Hali obuna bo‘lmagansiz!")
+
+# 6️⃣ Tugmalar
 @bot.message_handler(func=lambda message: message.text == "📩 Admin bilan aloqa")
 def contact_admin(message):
     bot.reply_to(message, "📞 Admin bilan aloqa: @Asqarov_0207")
@@ -70,7 +105,7 @@ def referral_link(message):
     link = f"https://t.me/{bot.get_me().username}?start={message.chat.id}"
     bot.reply_to(message, f"🔗 Sizning taklif havolangiz:\n{link}\n\nHar bir do‘st uchun +10 💎 olmos!")
 
-# 5️⃣ Video yuklab berish
+# 7️⃣ Video yuklab berish
 @bot.message_handler(func=lambda message: message.text.startswith("http"))
 def download_video(message):
     url = message.text.strip()
@@ -100,7 +135,7 @@ def download_video(message):
     except Exception as e:
         bot.reply_to(message, f"❌ Xatolik: {e}")
 
-# 6️⃣ Flask webhook
+# 8️⃣ Flask webhook
 @app.route(f"/{TELEGRAM_TOKEN}", methods=["POST"])
 def webhook():
     json_str = request.get_data().decode('utf-8')
@@ -108,13 +143,12 @@ def webhook():
     bot.process_new_updates([update])
     return "OK", 200
 
-# 7️⃣ Asosiy sahifa
+# 9️⃣ Asosiy sahifa
 @app.route("/", methods=["GET"])
 def home():
     return "<h2>✅ Bot server ishlayapti!</h2><p>Render orqali ishga tushgan video bot.</p>"
 
-# 8️⃣ Flaskni ishga tushirish
+# 🔟 Flaskni ishga tushirish
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
-
