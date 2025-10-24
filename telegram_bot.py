@@ -3,7 +3,6 @@ from flask import Flask, request
 import telebot
 import yt_dlp
 import tempfile
-import re
 
 # 1️⃣ Telegram token
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
@@ -13,7 +12,7 @@ if not TELEGRAM_TOKEN:
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 app = Flask(__name__)
 
-# 2️⃣ Cookie fayl
+# 2️⃣ Cookie fayl (agar kerak bo‘lsa)
 COOKIE_FILE = "cookies.txt"
 
 # 3️⃣ Kanal username
@@ -61,7 +60,7 @@ def send_welcome(message):
 
     # Menyu
     markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add("🎥 Video yuklash", "🎧 Qo‘shiq topish", "📩 Admin bilan aloqa", "💎 Mening olmoslarim", "🔗 Referal havola")
+    markup.add("🎥 Video yuklash", "📩 Admin bilan aloqa", "💎 Mening olmoslarim", "🔗 Referal havola")
     bot.send_message(user_id, "✅ Siz kanalga obuna bo‘lgansiz. Quyidagi menyudan tanlang:", reply_markup=markup)
 
 
@@ -92,51 +91,10 @@ def referral_link(message):
     bot.reply_to(message, f"🔗 Sizning taklif havolangiz:\n{link}\n\nHar bir do‘st uchun +10 💎 olmos!")
 
 
-# 8️⃣ Qo‘shiq topish
-@bot.message_handler(func=lambda message: message.text == "🎧 Qo‘shiq topish")
-def ask_song_name(message):
-    bot.reply_to(message, "🎶 Qaysi qo‘shiqni izlaymiz? Nomini yozing (masalan: Shahzoda - Hayot ayt).")
-
-@bot.message_handler(func=lambda message: not message.text.startswith("http") and not message.text.startswith("/"))
-def search_and_download_song(message):
-    query = message.text.strip()
-    bot.reply_to(message, f"🔎 '{query}' qo‘shig‘i qidirilmoqda...")
-
-    try:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            safe_name = re.sub(r'[\\/*?:"<>|#]', "", query)
-            opts = {
-                'quiet': True,
-                'noplaylist': True,
-                'cookiefile': COOKIE_FILE,
-                'default_search': 'ytsearch1',
-                'format': 'bestaudio/best',
-                'outtmpl': os.path.join(tmpdir, f'{safe_name}.%(ext)s'),
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': '192',
-                }],
-            }
-
-            with yt_dlp.YoutubeDL(opts) as ydl:
-                info = ydl.extract_info(query, download=True)
-                if 'entries' in info:
-                    info = info['entries'][0]
-                filename = ydl.prepare_filename(info).replace('.webm', '.mp3').replace('.m4a', '.mp3')
-
-            caption = f"🎶 <b>{info.get('title')}</b>\n📲 Yuklab beruvchi: <a href='https://t.me/@asqarov_uzbot'>@asqarov_uzbot</a>"
-            with open(filename, 'rb') as f:
-                bot.send_audio(message.chat.id, f, caption=caption, parse_mode='HTML')
-
-    except Exception as e:
-        bot.reply_to(message, f"❌ Xatolik: {e}")
-
-
-# 9️⃣ Video yuklash
+# 8️⃣ Video yuklash (faqat TikTok, Instagram, Facebook, Twitter)
 @bot.message_handler(func=lambda message: message.text == "🎥 Video yuklash")
 def ask_video_link(message):
-    bot.reply_to(message, "🎥 Yuklamoqchi bo‘lgan video havolasini yuboring (Instagram yoki YouTube).")
+    bot.reply_to(message, "🎥 Yuklamoqchi bo‘lgan video havolasini yuboring (TikTok, Instagram, Facebook yoki Twitter).")
 
 @bot.message_handler(func=lambda message: message.text.startswith("http"))
 def download_video(message):
@@ -144,42 +102,25 @@ def download_video(message):
     bot.reply_to(message, "⏳ Yuklab olinmoqda, biroz kuting...")
 
     try:
+        if not any(domain in url for domain in ["tiktok.com", "instagram.com", "fb.watch", "facebook.com", "x.com", "twitter.com"]):
+            bot.reply_to(message, "⚠️ Faqat TikTok, Instagram, Facebook yoki Twitter havolalarini yuboring.")
+            return
+
         with tempfile.TemporaryDirectory() as tmpdir:
-            safe_name = re.sub(r'[\\/*?:"<>|#]', "", url[-30:])
             video_opts = {
-                'outtmpl': os.path.join(tmpdir, f'{safe_name}.%(ext)s'),
-                'cookiefile': COOKIE_FILE,
-                'format': 'bestvideo+bestaudio/best',
-                'quiet': True,
-                'merge_output_format': 'mp4'
+                'outtmpl': os.path.join(tmpdir, '%(title)s.%(ext)s'),
+                'cookiefile': COOKIE_FILE if os.path.exists(COOKIE_FILE) else None,
+                'format': 'mp4',
+                'quiet': True
             }
 
             with yt_dlp.YoutubeDL(video_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
                 video_path = ydl.prepare_filename(info)
 
-            caption = f"🎬 <b>{info.get('title')}</b>\n📲 Yuklab beruvchi: <a href='https://t.me/asqarov_uzbot'>@asqarov_uzbot</a>"
+            caption = f"🎬 <b>{info.get('title', 'Video')}</b>\n📲 Yuklab beruvchi: <a href='https://t.me/asqarov_uzbot'>@asqarov_uzbot</a>"
             with open(video_path, 'rb') as v:
                 bot.send_video(message.chat.id, v, caption=caption, parse_mode='HTML')
-
-            # 🎧 Musiqa
-            audio_opts = {
-                'outtmpl': os.path.join(tmpdir, f'{safe_name}.%(ext)s'),
-                'cookiefile': COOKIE_FILE,
-                'format': 'bestaudio/best',
-                'quiet': True,
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': '192',
-                }],
-            }
-            with yt_dlp.YoutubeDL(audio_opts) as ydl_audio:
-                a_info = ydl_audio.extract_info(url, download=True)
-                audio_path = ydl_audio.prepare_filename(a_info).replace('.webm', '.mp3').replace('.m4a', '.mp3')
-
-            with open(audio_path, 'rb') as a:
-                bot.send_audio(message.chat.id, a, title=info.get('title'))
 
     except Exception as e:
         bot.reply_to(message, f"❌ Xatolik: {e}")
@@ -196,7 +137,7 @@ def webhook():
 
 @app.route("/")
 def home():
-    return "<h2>✅ Bot ishlayapti!</h2><p>Video va musiqa yuklab beruvchi bot (YouTube & Instagram).</p>"
+    return "<h2>✅ Bot ishlayapti!</h2><p>TikTok, Instagram, Facebook, Twitter videolarini yuklab beruvchi bot.</p>"
 
 
 if __name__ == "__main__":
