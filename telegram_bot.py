@@ -135,7 +135,7 @@ def download_video(message):
             artist = info.get('uploader', 'Noma’lum ijrochi')
             BOT_LINK = "https://t.me/Asqarov_2007_bot"
 
-            caption = f"🎶 <b>{title}</b>\n👤 {artist}\n\n📲 Yuklab beruvchi bot: <a href='{BOT_LINK}'>@Asqarov_2007_bot</a>"
+            caption = f"🎶 <b>{title}</b>\n👤 {artist}\n\n📲 Yuklab beruvchi bot: <a href='{BOT_LINK}'>@asqarov_uzbot</a>"
 
             # 🎥 Videoni yuboramiz
             with open(video_path, 'rb') as video:
