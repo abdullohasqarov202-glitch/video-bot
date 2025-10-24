@@ -105,3 +105,98 @@ def search_and_download_song(message):
         with tempfile.TemporaryDirectory() as tmpdir:
             opts = {
                 'quiet': True,
+                'noplaylist': True,
+                'cookiefile': COOKIE_FILE,
+                'default_search': 'ytsearch1',
+                'format': 'bestaudio/best',
+                'outtmpl': os.path.join(tmpdir, '%(title)s.%(ext)s'),
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': '192',
+                }],
+            }
+
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(query, download=True)
+                if 'entries' in info:
+                    info = info['entries'][0]
+                filename = ydl.prepare_filename(info).replace('.webm', '.mp3').replace('.m4a', '.mp3')
+
+            caption = f"🎶 <b>{info.get('title')}</b>\n📲 Yuklab beruvchi: <a href='https://t.me/Asqarov_2007_bot'>@Asqarov_2007_bot</a>"
+            with open(filename, 'rb') as f:
+                bot.send_audio(message.chat.id, f, caption=caption, parse_mode='HTML')
+
+    except Exception as e:
+        bot.reply_to(message, f"❌ Xatolik: {e}")
+
+
+# 9️⃣ Video yuklash
+@bot.message_handler(func=lambda message: message.text == "🎥 Video yuklash")
+def ask_video_link(message):
+    bot.reply_to(message, "🎥 Yuklamoqchi bo‘lgan video havolasini yuboring (Instagram yoki YouTube).")
+
+@bot.message_handler(func=lambda message: message.text.startswith("http"))
+def download_video(message):
+    url = message.text.strip()
+    bot.reply_to(message, "⏳ Yuklab olinmoqda, biroz kuting...")
+
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            video_opts = {
+                'outtmpl': os.path.join(tmpdir, '%(title)s.%(ext)s'),
+                'cookiefile': COOKIE_FILE,
+                'format': 'bestvideo+bestaudio/best',
+                'quiet': True,
+                'merge_output_format': 'mp4'
+            }
+
+            with yt_dlp.YoutubeDL(video_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                video_path = ydl.prepare_filename(info)
+
+            caption = f"🎬 <b>{info.get('title')}</b>\n📲 Yuklab beruvchi: <a href='https://t.me/@asqarov_uzbot'>@asqarov_uzbot</a>"
+            with open(video_path, 'rb') as v:
+                bot.send_video(message.chat.id, v, caption=caption, parse_mode='HTML')
+
+            # 🎧 Musiqa
+            audio_opts = {
+                'outtmpl': os.path.join(tmpdir, '%(title)s.%(ext)s'),
+                'cookiefile': COOKIE_FILE,
+                'format': 'bestaudio/best',
+                'quiet': True,
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': '192',
+                }],
+            }
+            with yt_dlp.YoutubeDL(audio_opts) as ydl_audio:
+                a_info = ydl_audio.extract_info(url, download=True)
+                audio_path = ydl_audio.prepare_filename(a_info).replace('.webm', '.mp3').replace('.m4a', '.mp3')
+
+            with open(audio_path, 'rb') as a:
+                bot.send_audio(message.chat.id, a, title=info.get('title'))
+
+    except Exception as e:
+        bot.reply_to(message, f"❌ Xatolik: {e}")
+
+
+# 🔟 Flask webhook
+@app.route(f"/{TELEGRAM_TOKEN}", methods=["POST"])
+def webhook():
+    json_str = request.get_data().decode('utf-8')
+    update = telebot.types.Update.de_json(json_str)
+    bot.process_new_updates([update])
+    return "OK", 200
+
+
+@app.route("/")
+def home():
+    return "<h2>✅ Bot ishlayapti!</h2><p>Video va musiqa yuklab beruvchi bot (YouTube & Instagram).</p>"
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
+
