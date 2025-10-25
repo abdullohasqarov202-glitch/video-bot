@@ -67,7 +67,7 @@ def send_welcome(message):
 
     # Asosiy menyu
     markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add("🎥 Video yuklash", "📩 Admin bilan aloqa", "💎 Mening olmoslarim", "🔗 Referal havola")
+    markup.add("🎥 Video yuklash", "📩 Admin bilan aloqa", "💎 Mening olmoslarim", "🔗 Referal havola", "💎 Premium olish")
 
     # 👑 Agar admin bo‘lsa, qo‘shimcha tugma
     if message.from_user.username == ADMIN_USERNAME[1:]:
@@ -116,6 +116,19 @@ def my_diamonds(message):
 def referral_link(message):
     link = f"https://t.me/{bot.get_me().username}?start={message.chat.id}"
     bot.reply_to(message, f"🔗 Sizning taklif havolangiz:\n{link}\n\nHar bir do‘st uchun +10 💎 olmos!")
+
+
+# 💎 PREMIUM OLIB BO‘LIMI
+@bot.message_handler(func=lambda message: message.text == "💎 Premium olish")
+def buy_premium(message):
+    user_id = message.chat.id
+    balance = user_balances.get(user_id, 0)
+
+    if balance >= 200:
+        user_balances[user_id] -= 200
+        bot.reply_to(message, "🌟 Tabriklaymiz! Siz Premium foydalanuvchi bo‘ldingiz! ✅")
+    else:
+        bot.reply_to(message, f"❌ Yetarli olmos yo‘q.\nSizda: {balance} 💎 bor.\nPremium olish uchun 200 💎 kerak.")
 
 
 # 🔟 Video yuklash (TikTok, Instagram, Facebook, Twitter)
