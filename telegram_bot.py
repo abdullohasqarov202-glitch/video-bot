@@ -18,9 +18,13 @@ COOKIE_FILE = "cookies.txt"
 # 3️⃣ Kanal username
 CHANNEL_USERNAME = "@Asqarov_2007"
 
-# 4️⃣ Referal tizimi uchun xotira
+# 4️⃣ Referal tizimi va foydalanuvchilar xotirasi
 user_referrals = {}
 user_balances = {}
+all_users = set()  # ✅ start bosgan foydalanuvchilarni saqlaydi
+
+# 5️⃣ Admin username
+ADMIN_USERNAME = "@Asqarov_0207"
 
 # ✅ Obuna tekshirish
 def is_subscribed(user_id):
@@ -31,11 +35,14 @@ def is_subscribed(user_id):
         return False
 
 
-# 5️⃣ Start / help
+# 6️⃣ Start / help
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
     user_id = message.chat.id
     args = message.text.split()
+
+    # Foydalanuvchini ro‘yxatga qo‘shish
+    all_users.add(user_id)
 
     # Obuna tekshirish
     if not is_subscribed(user_id):
@@ -58,13 +65,18 @@ def send_welcome(message):
             user_balances[referrer_id] = user_balances.get(referrer_id, 0) + 10
             bot.send_message(referrer_id, "🎉 Do‘stingiz sizning havolangiz orqali kirdi! Sizga +10 💎 olmos!")
 
-    # Menyu
+    # Asosiy menyu
     markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add("🎥 Video yuklash", "📩 Admin bilan aloqa", "💎 Mening olmoslarim", "🔗 Referal havola")
+
+    # 👑 Agar admin bo‘lsa, qo‘shimcha tugma
+    if message.from_user.username == ADMIN_USERNAME[1:]:
+        markup.add("👤 Foydalanuvchilar ro‘yxati")
+
     bot.send_message(user_id, "✅ Siz kanalga obuna bo‘lgansiz. Quyidagi menyudan tanlang:", reply_markup=markup)
 
 
-# 6️⃣ Obuna qayta tekshirish
+# 7️⃣ Obuna qayta tekshirish
 @bot.callback_query_handler(func=lambda call: call.data == "check_sub")
 def check_subscription(call):
     user_id = call.message.chat.id
@@ -75,7 +87,22 @@ def check_subscription(call):
         bot.answer_callback_query(call.id, "🚫 Hali obuna bo‘lmagansiz!")
 
 
-# 7️⃣ Admin va referal
+# 8️⃣ Admin menyusi — foydalanuvchilar ro‘yxati
+@bot.message_handler(func=lambda message: message.text == "👤 Foydalanuvchilar ro‘yxati")
+def show_users(message):
+    if message.from_user.username != ADMIN_USERNAME[1:]:
+        bot.reply_to(message, "🚫 Siz bu bo‘limga kira olmaysiz.")
+        return
+
+    if not all_users:
+        bot.reply_to(message, "👤 Hozircha hech kim start bosmagan.")
+        return
+
+    users_text = "\n".join([f"• {uid}" for uid in all_users])
+    bot.reply_to(message, f"👥 <b>Botni start bosgan foydalanuvchilar:</b>\n\n{users_text}", parse_mode="HTML")
+
+
+# 9️⃣ Admin va referal
 @bot.message_handler(func=lambda message: message.text == "📩 Admin bilan aloqa")
 def contact_admin(message):
     bot.reply_to(message, "📞 Admin: @Asqarov_0207")
@@ -91,7 +118,7 @@ def referral_link(message):
     bot.reply_to(message, f"🔗 Sizning taklif havolangiz:\n{link}\n\nHar bir do‘st uchun +10 💎 olmos!")
 
 
-# 8️⃣ Video yuklash (TikTok, Instagram, Facebook, Twitter)
+# 🔟 Video yuklash (TikTok, Instagram, Facebook, Twitter)
 @bot.message_handler(func=lambda message: message.text == "🎥 Video yuklash")
 def ask_video_link(message):
     bot.reply_to(message, "🎥 Yuklamoqchi bo‘lgan video havolasini yuboring (TikTok, Instagram, Facebook yoki Twitter).")
@@ -118,17 +145,17 @@ def download_video(message):
                 info = ydl.extract_info(url, download=True)
                 video_path = ydl.prepare_filename(info)
 
-            # 🎵 Qo‘shiq nomi (agar bo‘lsa)
+            # 🎵 Qo‘shiq nomi
             music = info.get("music") or info.get("track") or info.get("artist") or info.get("alt_title")
             music_text = f"\n🎵 Qo‘shiq: {music}" if music else ""
 
-            # 📄 Caption — yangilangan
+            # 📄 Caption
             caption = (
                 f"🎬 <b>{info.get('title', 'Video')}</b>{music_text}\n\n"
                 f"✨ <b>Yuklab beruvchi:</b> <a href='https://t.me/asqarov_uzbot'>@asqarov_uzbot</a> 🤖💫"
             )
 
-            # 🔘 Tugma — faqat kanalga olib boradi
+            # 🔘 Tugma — kanalga olib boradi
             markup = telebot.types.InlineKeyboardMarkup()
             markup.add(
                 telebot.types.InlineKeyboardButton("➕ Guruh yoki kanalga qo‘shilish", url=f"https://t.me/{CHANNEL_USERNAME[1:]}")
@@ -148,7 +175,7 @@ def download_video(message):
         bot.reply_to(message, f"❌ Xatolik: {e}")
 
 
-# 🔟 Flask webhook
+# 🧩 Flask webhook
 @app.route(f"/{TELEGRAM_TOKEN}", methods=["POST"])
 def webhook():
     json_str = request.get_data().decode('utf-8')
