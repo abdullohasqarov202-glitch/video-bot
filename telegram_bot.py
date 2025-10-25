@@ -122,10 +122,10 @@ def download_video(message):
             music = info.get("music") or info.get("track") or info.get("artist") or info.get("alt_title")
             music_text = f"\n🎵 Qo‘shiq: {music}" if music else ""
 
-            # 📄 Caption — BOT NOMI QAYTARILDI
+            # 📄 Caption — yangilangan
             caption = (
                 f"🎬 <b>{info.get('title', 'Video')}</b>{music_text}\n\n"
-                f"🤖 Yuklab beruvchi bot: <a href='https://t.me/asqarov_uzbot'>@asqarov_uzbot</a>"
+                f"✨ <b>Yuklab beruvchi:</b> <a href='https://t.me/asqarov_uzbot'>@asqarov_uzbot</a> 🤖💫"
             )
 
             # 🔘 Tugma — faqat kanalga olib boradi
