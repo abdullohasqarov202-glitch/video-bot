@@ -68,7 +68,9 @@ def send_welcome(message):
 
     # Asosiy menyu
     markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add("🎥 Video yuklash", "📩 Admin bilan aloqa", "💎 Mening olmoslarim", "🔗 Referal havola", "💎 Premium olish")
+    markup.add("🎥 Video yuklash", "📩 Admin bilan aloqa")
+    markup.add("💎 Mening olmoslarim", "🔗 Referal havola")
+    markup.add("💎 Premium olish", "🎬 Kinolar")  # ✅ Yangi tugma qo‘shildi!
 
     # 👑 Agar admin bo‘lsa, qo‘shimcha tugma
     if message.from_user.username == ADMIN_USERNAME[1:]:
@@ -99,7 +101,6 @@ def show_users(message):
         bot.reply_to(message, "👤 Hozircha hech kim /start bosmagan.")
         return
 
-    # ✅ Foydalanuvchilarni username bilan chiqarish
     users_text = "\n".join([
         f"• @{uname}" if uname != f"id:{uid}" else f"• id:{uid}"
         for uid, uname in all_users.items()
@@ -137,6 +138,14 @@ def buy_premium(message):
         bot.reply_to(message, f"❌ Yetarli olmos yo‘q.\nSizda: {balance} 💎 bor.\nPremium olish uchun 200 💎 kerak.")
 
 
+# 🎬 KINOLAR TUGMASI
+@bot.message_handler(func=lambda message: message.text == "🎬 Kinolar")
+def open_movies_channel(message):
+    markup = telebot.types.InlineKeyboardMarkup()
+    markup.add(telebot.types.InlineKeyboardButton("🎬 Kinolar kanaliga o‘tish", url="https://t.me/KINOLAR_UZB12"))
+    bot.send_message(message.chat.id, "🍿 Quyidagi tugma orqali kinolar kanaliga o‘ting:", reply_markup=markup)
+
+
 # 🔟 Video yuklash (TikTok, Instagram, Facebook, Twitter)
 @bot.message_handler(func=lambda message: message.text == "🎥 Video yuklash")
 def ask_video_link(message):
@@ -164,16 +173,13 @@ def download_video(message):
                 info = ydl.extract_info(url, download=True)
                 video_path = ydl.prepare_filename(info)
 
-            # 🎵 Qo‘shiq nomi
             music = info.get("music") or info.get("track") or info.get("artist") or info.get("alt_title")
             music_text = f"\n🎵 Qo‘shiq: {music}" if music else ""
 
-            # 📄 Caption
             caption = (
                 f"✨ <b>Yuklab beruvchi:</b> <a href='https://t.me/asqarov_uzbot'>@asqarov_uzbot</a> 💫"
             )
 
-            # 🔘 Tugma — kanalga olib boradi
             markup = telebot.types.InlineKeyboardMarkup()
             markup.add(
                 telebot.types.InlineKeyboardButton("➕ Guruh yoki kanalga qo‘shilish", url=f"https://t.me/{CHANNEL_USERNAME[1:]}"),
