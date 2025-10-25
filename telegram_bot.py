@@ -21,7 +21,7 @@ CHANNEL_USERNAME = "@Asqarov_2007"
 # 4️⃣ Referal tizimi va foydalanuvchilar xotirasi
 user_referrals = {}
 user_balances = {}
-all_users = set()  # ✅ start bosgan foydalanuvchilarni saqlaydi
+all_users = {}  # ✅ user_id: username shaklida saqlanadi
 
 # 5️⃣ Admin username
 ADMIN_USERNAME = "@Asqarov_0207"
@@ -39,10 +39,11 @@ def is_subscribed(user_id):
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
     user_id = message.chat.id
+    username = message.from_user.username or f"id:{user_id}"
     args = message.text.split()
 
-    # Foydalanuvchini ro‘yxatga qo‘shish
-    all_users.add(user_id)
+    # ✅ Foydalanuvchini ro‘yxatga qo‘shish
+    all_users[user_id] = username
 
     # Obuna tekshirish
     if not is_subscribed(user_id):
@@ -87,7 +88,7 @@ def check_subscription(call):
         bot.answer_callback_query(call.id, "🚫 Hali obuna bo‘lmagansiz!")
 
 
-# 8️⃣ Admin menyusi — foydalanuvchilar ro‘yxati
+# 8️⃣ Admin menyusi — foydalanuvchilar ro‘yxati (faqat ADMIN uchun)
 @bot.message_handler(func=lambda message: message.text == "👤 Foydalanuvchilar ro‘yxati")
 def show_users(message):
     if message.from_user.username != ADMIN_USERNAME[1:]:
@@ -95,11 +96,16 @@ def show_users(message):
         return
 
     if not all_users:
-        bot.reply_to(message, "👤 Hozircha hech kim start bosmagan.")
+        bot.reply_to(message, "👤 Hozircha hech kim /start bosmagan.")
         return
 
-    users_text = "\n".join([f"• {uid}" for uid in all_users])
-    bot.reply_to(message, f"👥 <b>Botni start bosgan foydalanuvchilar:</b>\n\n{users_text}", parse_mode="HTML")
+    # ✅ Foydalanuvchilarni username bilan chiqarish
+    users_text = "\n".join([
+        f"• @{uname}" if uname != f"id:{uid}" else f"• id:{uid}"
+        for uid, uname in all_users.items()
+    ])
+
+    bot.reply_to(message, f"👥 <b>Start bosgan foydalanuvchilar:</b>\n\n{users_text}", parse_mode="HTML")
 
 
 # 9️⃣ Admin va referal
@@ -164,17 +170,15 @@ def download_video(message):
 
             # 📄 Caption
             caption = (
-                f"🎬 <b>{info.get('title', 'Video')}</b>{music_text}\n\n"
-                f"✨ <b>Yuklab beruvchi:</b> <a href='https://t.me/asqarov_uzbot'>@asqarov_uzbot</a> 🤖💫"
+                f"✨ <b>Yuklab beruvchi:</b> <a href='https://t.me/asqarov_uzbot'>@asqarov_uzbot</a> 💫"
             )
 
             # 🔘 Tugma — kanalga olib boradi
             markup = telebot.types.InlineKeyboardMarkup()
             markup.add(
-                telebot.types.InlineKeyboardButton("➕ Guruh yoki kanalga qo‘shilish", url=f"https://t.me/{CHANNEL_USERNAME[1:]}")
+                telebot.types.InlineKeyboardButton("➕ Guruh yoki kanalga qo‘shilish", url=f"https://t.me/{CHANNEL_USERNAME[1:]}"),
             )
 
-            # 🎥 Video yuborish
             with open(video_path, 'rb') as v:
                 bot.send_video(
                     message.chat.id,
