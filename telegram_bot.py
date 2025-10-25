@@ -35,6 +35,7 @@ def is_subscribed(user_id):
         return False
 
 
+
 # 6️⃣ Start / help
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
@@ -43,6 +44,7 @@ def send_welcome(message):
     args = message.text.split()
 
     # ✅ Foydalanuvchini ro‘yxatga qo‘shish
+    first_time = user_id not in all_users  # 🔹 birinchi marta kirdi yoki yo‘q
     all_users[user_id] = username
 
     # Obuna tekshirish
@@ -58,6 +60,40 @@ def send_welcome(message):
             reply_markup=markup
         )
         return
+
+    # 🌟 Agar foydalanuvchi birinchi marta kirgan bo‘lsa — tanishtiruv xabari chiqadi
+    if first_time:
+        intro_text = (
+            "👋 <b>Salom!</b> Men sizga yordam beruvchi <b>video yuklab beruvchi botman</b>!\n\n"
+            "📽 <b>Nimalar qila olaman:</b>\n"
+            "• TikTok, Instagram, Facebook, Twitter (X) videolarini yuklab beraman 🎥\n"
+            "• Kinolar kanaliga yo‘naltiraman 🎬\n"
+            "• Do‘stlaringizni taklif qilib olmos yig‘ish imkoniyati 💎\n"
+            "• Premium olish imkoniyati 🌟\n"
+            "• Admin bilan bevosita bog‘lanish 📩\n\n"
+            "👇 Quyidagi menyu orqali kerakli bo‘limni tanlang!"
+        )
+        bot.send_message(user_id, intro_text, parse_mode="HTML")
+
+    # Referal tizimi
+    if len(args) > 1:
+        referrer_id = args[1]
+        if referrer_id != str(user_id):
+            user_balances[referrer_id] = user_balances.get(referrer_id, 0) + 10
+            bot.send_message(referrer_id, "🎉 Do‘stingiz sizning havolangiz orqali kirdi! Sizga +10 💎 olmos!")
+
+    # ✅ Tugmalar tartibi
+    markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add("🎥 Video yuklash", "🎬 Kinolar")
+    markup.add("🔗 Referal havola", "💎 Mening olmoslarim")
+    markup.add("📩 Admin bilan aloqa", "💎 Premium olish")
+
+    # 👑 Agar admin bo‘lsa, qo‘shimcha tugma
+    if message.from_user.username == ADMIN_USERNAME[1:]:
+        markup.add("👤 Foydalanuvchilar ro‘yxati")
+
+    bot.send_message(user_id, "✅ Siz kanalga obuna bo‘lgansiz. Quyidagi menyudan tanlang:", reply_markup=markup)
+
 
     # Referal tizimi
     if len(args) > 1:
