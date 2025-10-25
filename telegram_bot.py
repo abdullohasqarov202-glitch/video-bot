@@ -3,6 +3,7 @@ from flask import Flask, request
 import telebot
 import yt_dlp
 import tempfile
+from datetime import datetime, timedelta
 
 # 1️⃣ Telegram token
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
@@ -12,19 +13,21 @@ if not TELEGRAM_TOKEN:
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 app = Flask(__name__)
 
-# 2️⃣ Cookie fayl (agar kerak bo‘lsa)
+# 2️⃣ Cookie fayl
 COOKIE_FILE = "cookies.txt"
 
 # 3️⃣ Kanal username
 CHANNEL_USERNAME = "@Asqarov_2007"
 
-# 4️⃣ Referal tizimi va foydalanuvchilar xotirasi
+# 4️⃣ Referal tizimi va foydalanuvchilar
 user_referrals = {}
 user_balances = {}
-all_users = {}  # ✅ user_id: username shaklida saqlanadi
+all_users = {}
+user_last_bonus = {}
 
 # 5️⃣ Admin username
 ADMIN_USERNAME = "@Asqarov_0207"
+
 
 # ✅ Obuna tekshirish
 def is_subscribed(user_id):
@@ -35,7 +38,6 @@ def is_subscribed(user_id):
         return False
 
 
-
 # 6️⃣ Start / help
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
@@ -43,8 +45,7 @@ def send_welcome(message):
     username = message.from_user.username or f"id:{user_id}"
     args = message.text.split()
 
-    # ✅ Foydalanuvchini ro‘yxatga qo‘shish
-    first_time = user_id not in all_users  # 🔹 birinchi marta kirdi yoki yo‘q
+    first_time = user_id not in all_users
     all_users[user_id] = username
 
     # Obuna tekshirish
@@ -54,24 +55,22 @@ def send_welcome(message):
             telebot.types.InlineKeyboardButton("📢 Kanalga obuna bo‘lish", url=f"https://t.me/{CHANNEL_USERNAME[1:]}"),
             telebot.types.InlineKeyboardButton("✅ Obunani tekshirish", callback_data="check_sub")
         )
-        bot.send_message(
-            user_id,
+        bot.send_message(user_id,
             f"👋 Assalomu alaykum!\n\nBotdan foydalanish uchun kanalga obuna bo‘ling:\n{CHANNEL_USERNAME}",
             reply_markup=markup
         )
         return
 
-    # 🌟 Agar foydalanuvchi birinchi marta kirgan bo‘lsa — tanishtiruv xabari chiqadi
     if first_time:
         intro_text = (
             "👋 <b>Salom!</b> Men sizga yordam beruvchi <b>video yuklab beruvchi botman</b>!\n\n"
             "📽 <b>Nimalar qila olaman:</b>\n"
-            "• TikTok, Instagram, Facebook, Twitter (X) videolarini yuklab beraman 🎥\n"
+            "• TikTok, Instagram, Facebook, Twitter videolarini yuklab beraman 🎥\n"
             "• Kinolar kanaliga yo‘naltiraman 🎬\n"
-            "• Do‘stlaringizni taklif qilib olmos yig‘ish imkoniyati 💎\n"
-            "• Premium olish imkoniyati 🌟\n"
-            "• Admin bilan bevosita bog‘lanish 📩\n\n"
-            "👇 Quyidagi menyu orqali kerakli bo‘limni tanlang!"
+            "• Do‘stlaringizni taklif qilib olmos yig‘ish 💎\n"
+            "• Premium olish 🌟 va reklama joylash 📢\n"
+            "• Admin bilan bog‘lanish 📩\n\n"
+            "👇 Quyidagi menyudan tanlang!"
         )
         bot.send_message(user_id, intro_text, parse_mode="HTML")
 
@@ -80,39 +79,24 @@ def send_welcome(message):
         referrer_id = args[1]
         if referrer_id != str(user_id):
             user_balances[referrer_id] = user_balances.get(referrer_id, 0) + 10
-            bot.send_message(referrer_id, "🎉 Do‘stingiz sizning havolangiz orqali kirdi! Sizga +10 💎 olmos!")
+            bot.send_message(referrer_id, "🎉 Do‘stingiz sizning havolangiz orqali kirdi! +10 💎 olmos!")
 
-    # ✅ Tugmalar tartibi
+    show_menu(message)
+
+
+# 🔄 Menyu qayta ko‘rsatish
+def show_menu(message):
     markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add("🎥 Video yuklash", "🎬 Kinolar")
+    markup.add("💰 Pul ishlash", "🎁 Bonus olish")
     markup.add("🔗 Referal havola", "💎 Mening olmoslarim")
+    markup.add("📊 Statistika", "📢 Reklama berish")
     markup.add("📩 Admin bilan aloqa", "💎 Premium olish")
 
-    # 👑 Agar admin bo‘lsa, qo‘shimcha tugma
     if message.from_user.username == ADMIN_USERNAME[1:]:
         markup.add("👤 Foydalanuvchilar ro‘yxati")
 
-    bot.send_message(user_id, "✅ Siz kanalga obuna bo‘lgansiz. Quyidagi menyudan tanlang:", reply_markup=markup)
-
-
-    # Referal tizimi
-    if len(args) > 1:
-        referrer_id = args[1]
-        if referrer_id != str(user_id):
-            user_balances[referrer_id] = user_balances.get(referrer_id, 0) + 10
-            bot.send_message(referrer_id, "🎉 Do‘stingiz sizning havolangiz orqali kirdi! Sizga +10 💎 olmos!")
-
-    # ✅ Tugmalar tartibi o‘zgartirildi
-    markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add("🎥 Video yuklash", "🎬 Kinolar")
-    markup.add("🔗 Referal havola", "💎 Mening olmoslarim")
-    markup.add("📩 Admin bilan aloqa", "💎 Premium olish")
-
-    # 👑 Agar admin bo‘lsa, qo‘shimcha tugma
-    if message.from_user.username == ADMIN_USERNAME[1:]:
-        markup.add("👤 Foydalanuvchilar ro‘yxati")
-
-    bot.send_message(user_id, "✅ Siz kanalga obuna bo‘lgansiz. Quyidagi menyudan tanlang:", reply_markup=markup)
+    bot.send_message(message.chat.id, "📍 Quyidagi menyudan tanlang:", reply_markup=markup)
 
 
 # 7️⃣ Obuna qayta tekshirish
@@ -125,13 +109,13 @@ def check_subscription(call):
     else:
         bot.answer_callback_query(call.id, "🚫 Hali obuna bo‘lmagansiz!")
 
-# 8️⃣ Admin menyusi — foydalanuvchilar ro‘yxati (faqat ADMIN uchun)
+
+# 8️⃣ Admin menyusi
 @bot.message_handler(func=lambda message: message.text == "👤 Foydalanuvchilar ro‘yxati")
 def show_users(message):
     if message.from_user.username != ADMIN_USERNAME[1:]:
         bot.reply_to(message, "🚫 Siz bu bo‘limga kira olmaysiz.")
         return
-
     if not all_users:
         bot.reply_to(message, "👤 Hozircha hech kim /start bosmagan.")
         return
@@ -140,18 +124,12 @@ def show_users(message):
         f"• @{uname}" if uname != f"id:{uid}" else f"• id:{uid}"
         for uid, uname in all_users.items()
     ])
-
-    total_users = len(all_users)  # 🔢 jami foydalanuvchilar soni
-
-    bot.reply_to(
-        message,
-        f"👥 <b>Start bosgan foydalanuvchilar:</b>\n\n{users_text}\n\n📊 <b>Jami:</b> {total_users} ta foydalanuvchi",
-        parse_mode="HTML"
-    )
+    total_users = len(all_users)
+    bot.reply_to(message, f"👥 <b>Start bosgan foydalanuvchilar:</b>\n\n{users_text}\n\n📊 <b>Jami:</b> {total_users} ta",
+                 parse_mode="HTML")
 
 
-
-# 9️⃣ Admin va referal
+# 9️⃣ Foydali bo‘limlar
 @bot.message_handler(func=lambda message: message.text == "📩 Admin bilan aloqa")
 def contact_admin(message):
     bot.reply_to(message, "📞 Admin: @Asqarov_0207")
@@ -167,20 +145,70 @@ def referral_link(message):
     bot.reply_to(message, f"🔗 Sizning taklif havolangiz:\n{link}\n\nHar bir do‘st uchun +10 💎 olmos!")
 
 
-# 💎 PREMIUM OLIB BO‘LIMI
-@bot.message_handler(func=lambda message: message.text == "💎 Premium olish")
-def buy_premium(message):
+# 💰 Pul ishlash
+@bot.message_handler(func=lambda message: message.text == "💰 Pul ishlash")
+def earn_money(message):
+    text = (
+        "💰 <b>Botdan pul ishlash yo‘llari:</b>\n\n"
+        "1️⃣ Do‘stingiz /start bossa — sizga +10 💎 beriladi.\n"
+        "2️⃣ Har kuni bonus oling 🎁\n"
+        "3️⃣ 200 💎 to‘plang — Premium oling 🌟\n"
+        "4️⃣ 100 💎 to‘plang — Reklama joylang 📢"
+    )
+    bot.send_message(message.chat.id, text, parse_mode="HTML")
+
+
+# 🎁 Bonus olish
+@bot.message_handler(func=lambda message: message.text == "🎁 Bonus olish")
+def daily_bonus(message):
+    user_id = message.chat.id
+    now = datetime.now()
+    last_time = user_last_bonus.get(user_id)
+    if last_time and now - last_time < timedelta(hours=24):
+        time_left = timedelta(hours=24) - (now - last_time)
+        hours_left = int(time_left.total_seconds() // 3600)
+        bot.send_message(message.chat.id, f"⏳ Bonusni {hours_left} soatdan keyin olasiz.")
+        return
+
+    user_last_bonus[user_id] = now
+    user_balances[user_id] = user_balances.get(user_id, 0) + 20
+    bot.send_message(message.chat.id, "🎁 Tabriklaymiz! Sizga 20 💎 bonus qo‘shildi!")
+
+
+# 📊 Statistika
+@bot.message_handler(func=lambda message: message.text == "📊 Statistika")
+def show_stats(message):
+    user_id = message.chat.id
+    balance = user_balances.get(user_id, 0)
+    referrals = sum(1 for refs in user_referrals.values() if refs == user_id)
+    bot.send_message(message.chat.id,
+        f"📊 <b>Statistika:</b>\n👥 Takliflar: {referrals}\n💎 Olmos: {balance}\n🎯 Do‘st uchun: +10 💎",
+        parse_mode="HTML"
+    )
+
+
+# 📢 Reklama berish
+@bot.message_handler(func=lambda message: message.text == "📢 Reklama berish")
+def reklama_berish(message):
     user_id = message.chat.id
     balance = user_balances.get(user_id, 0)
 
-    if balance >= 200:
-        user_balances[user_id] -= 200
-        bot.reply_to(message, "🌟 Tabriklaymiz! Siz Premium foydalanuvchi bo‘ldingiz! ✅")
-    else:
-        bot.reply_to(message, f"❌ Yetarli olmos yo‘q.\nSizda: {balance} 💎 bor.\nPremium olish uchun 200 💎 kerak.")
+    if balance < 100:
+        bot.send_message(user_id, f"❌ Reklama joylash uchun kamida 100 💎 kerak.\nSizda: {balance} 💎 bor.")
+        return
+
+    bot.send_message(user_id, "📢 Reklamangizni yuboring (matn, rasm yoki video bo‘lishi mumkin):")
+    bot.register_next_step_handler(message, reklama_qabul)
 
 
-# 🎬 KINOLAR TUGMASI
+def reklama_qabul(message):
+    user_id = message.chat.id
+    user_balances[user_id] -= 100
+    bot.send_message(user_id, "✅ Reklama qabul qilindi va tez orada joylanadi. -100 💎 hisobingizdan olindi.")
+    bot.send_message(ADMIN_USERNAME, f"📢 Yangi reklama:\n\n{message.text}")
+
+
+# 🎬 Kinolar tugmasi
 @bot.message_handler(func=lambda message: message.text == "🎬 Kinolar")
 def open_movies_channel(message):
     markup = telebot.types.InlineKeyboardMarkup()
@@ -188,53 +216,38 @@ def open_movies_channel(message):
     bot.send_message(message.chat.id, "🍿 Quyidagi tugma orqali kinolar kanaliga o‘ting:", reply_markup=markup)
 
 
-# 🔟 Video yuklash (TikTok, Instagram, Facebook, Twitter)
+# 🎥 Video yuklash
 @bot.message_handler(func=lambda message: message.text == "🎥 Video yuklash")
 def ask_video_link(message):
-    bot.reply_to(message, "🎥 Yuklamoqchi bo‘lgan video havolasini yuboring (TikTok, Instagram, Facebook yoki Twitter).")
+    bot.reply_to(message, "🎥 Video havolasini yuboring (TikTok, Instagram, Facebook yoki Twitter).")
 
 @bot.message_handler(func=lambda message: message.text.startswith("http"))
 def download_video(message):
     url = message.text.strip()
-    bot.reply_to(message, "⏳ Yuklab olinmoqda, biroz kuting...")
+    bot.reply_to(message, "⏳ Yuklab olinmoqda...")
 
     try:
-        if not any(domain in url for domain in ["tiktok.com", "instagram.com", "fb.watch", "facebook.com", "x.com", "twitter.com"]):
-            bot.reply_to(message, "⚠️ Faqat TikTok, Instagram, Facebook yoki Twitter havolalarini yuboring.")
+        if not any(d in url for d in ["tiktok.com", "instagram.com", "facebook.com", "x.com", "twitter.com", "fb.watch"]):
+            bot.reply_to(message, "⚠️ Faqat TikTok, Instagram, Facebook yoki Twitter havolasi yuboring.")
             return
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            video_opts = {
+            ydl_opts = {
                 'outtmpl': os.path.join(tmpdir, '%(title)s.%(ext)s'),
                 'cookiefile': COOKIE_FILE if os.path.exists(COOKIE_FILE) else None,
                 'format': 'mp4',
                 'quiet': True
             }
-
-            with yt_dlp.YoutubeDL(video_opts) as ydl:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
                 video_path = ydl.prepare_filename(info)
 
-            music = info.get("music") or info.get("track") or info.get("artist") or info.get("alt_title")
-            music_text = f"\n🎵 Qo‘shiq: {music}" if music else ""
-
-            caption = (
-                f"✨ <b>Yuklab beruvchi:</b> <a href='https://t.me/asqarov_uzbot'>@asqarov_uzbot</a> 💫"
-            )
-
+            caption = "✨ <b>Yuklab beruvchi:</b> <a href='https://t.me/asqarov_uzbot'>@asqarov_uzbot</a> 💫"
             markup = telebot.types.InlineKeyboardMarkup()
-            markup.add(
-                telebot.types.InlineKeyboardButton("➕ Guruh yoki kanalga qo‘shilish", url=f"https://t.me/{CHANNEL_USERNAME[1:]}"),
-            )
+            markup.add(telebot.types.InlineKeyboardButton("➕ Kanalga qo‘shilish", url=f"https://t.me/{CHANNEL_USERNAME[1:]}"))
 
             with open(video_path, 'rb') as v:
-                bot.send_video(
-                    message.chat.id,
-                    v,
-                    caption=caption,
-                    parse_mode='HTML',
-                    reply_markup=markup
-                )
+                bot.send_video(message.chat.id, v, caption=caption, parse_mode='HTML', reply_markup=markup)
 
     except Exception as e:
         bot.reply_to(message, f"❌ Xatolik: {e}")
@@ -243,8 +256,7 @@ def download_video(message):
 # 🧩 Flask webhook
 @app.route(f"/{TELEGRAM_TOKEN}", methods=["POST"])
 def webhook():
-    json_str = request.get_data().decode('utf-8')
-    update = telebot.types.Update.de_json(json_str)
+    update = telebot.types.Update.de_json(request.get_data().decode('utf-8'))
     bot.process_new_updates([update])
     return "OK", 200
 
