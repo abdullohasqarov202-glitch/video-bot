@@ -89,7 +89,6 @@ def check_subscription(call):
     else:
         bot.answer_callback_query(call.id, "🚫 Hali obuna bo‘lmagansiz!")
 
-
 # 8️⃣ Admin menyusi — foydalanuvchilar ro‘yxati (faqat ADMIN uchun)
 @bot.message_handler(func=lambda message: message.text == "👤 Foydalanuvchilar ro‘yxati")
 def show_users(message):
@@ -106,7 +105,14 @@ def show_users(message):
         for uid, uname in all_users.items()
     ])
 
-    bot.reply_to(message, f"👥 <b>Start bosgan foydalanuvchilar:</b>\n\n{users_text}", parse_mode="HTML")
+    total_users = len(all_users)  # 🔢 jami foydalanuvchilar soni
+
+    bot.reply_to(
+        message,
+        f"👥 <b>Start bosgan foydalanuvchilar:</b>\n\n{users_text}\n\n📊 <b>Jami:</b> {total_users} ta foydalanuvchi",
+        parse_mode="HTML"
+    )
+
 
 
 # 9️⃣ Admin va referal
