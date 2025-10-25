@@ -171,8 +171,8 @@ def daily_bonus(message):
         return
 
     user_last_bonus[user_id] = now
-    user_balances[user_id] = user_balances.get(user_id, 0) + 20
-    bot.send_message(message.chat.id, "🎁 Tabriklaymiz! Sizga 20 💎 bonus qo‘shildi!")
+    user_balances[user_id] = user_balances.get(user_id, 0) + 5
+    bot.send_message(message.chat.id, "🎁 Tabriklaymiz! Sizga 5 💎 bonus qo‘shildi!")
 
 
 # 📊 Statistika
