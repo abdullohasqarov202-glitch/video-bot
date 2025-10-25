@@ -91,7 +91,7 @@ def referral_link(message):
     bot.reply_to(message, f"🔗 Sizning taklif havolangiz:\n{link}\n\nHar bir do‘st uchun +10 💎 olmos!")
 
 
-# 8️⃣ Video yuklash (faqat TikTok, Instagram, Facebook, Twitter)
+# 8️⃣ Video yuklash (TikTok, Instagram, Facebook, Twitter)
 @bot.message_handler(func=lambda message: message.text == "🎥 Video yuklash")
 def ask_video_link(message):
     bot.reply_to(message, "🎥 Yuklamoqchi bo‘lgan video havolasini yuboring (TikTok, Instagram, Facebook yoki Twitter).")
@@ -118,20 +118,20 @@ def download_video(message):
                 info = ydl.extract_info(url, download=True)
                 video_path = ydl.prepare_filename(info)
 
-            # 🎵 Musiqa nomini olish (agar bo‘lsa)
+            # 🎵 Qo‘shiq nomi (agar bo‘lsa)
             music = info.get("music") or info.get("track") or info.get("artist") or info.get("alt_title")
             music_text = f"\n🎵 Qo‘shiq: {music}" if music else ""
 
-            # 📄 Caption (bot nomi doim chiqadi)
+            # 📄 Caption — BOT NOMI QAYTARILDI
             caption = (
                 f"🎬 <b>{info.get('title', 'Video')}</b>{music_text}\n\n"
                 f"🤖 Yuklab beruvchi bot: <a href='https://t.me/asqarov_uzbot'>@asqarov_uzbot</a>"
             )
 
-            # 🔘 Tugma qo‘shish
+            # 🔘 Tugma — faqat kanalga olib boradi
             markup = telebot.types.InlineKeyboardMarkup()
             markup.add(
-                telebot.types.InlineKeyboardButton("➕ Guruh yoki kanalga qo‘shilish", url="https://t.me/Asqarov_2007")
+                telebot.types.InlineKeyboardButton("➕ Guruh yoki kanalga qo‘shilish", url=f"https://t.me/{CHANNEL_USERNAME[1:]}")
             )
 
             # 🎥 Video yuborish
