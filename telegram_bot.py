@@ -66,11 +66,11 @@ def send_welcome(message):
             user_balances[referrer_id] = user_balances.get(referrer_id, 0) + 10
             bot.send_message(referrer_id, "🎉 Do‘stingiz sizning havolangiz orqali kirdi! Sizga +10 💎 olmos!")
 
-    # Asosiy menyu
+    # ✅ Tugmalar tartibi o‘zgartirildi
     markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add("🎥 Video yuklash", "📩 Admin bilan aloqa")
-    markup.add("💎 Mening olmoslarim", "🔗 Referal havola")
-    markup.add("💎 Premium olish", "🎬 Kinolar")  # ✅ Yangi tugma qo‘shildi!
+    markup.add("🎥 Video yuklash", "🎬 Kinolar")
+    markup.add("🔗 Referal havola", "💎 Mening olmoslarim")
+    markup.add("📩 Admin bilan aloqa", "💎 Premium olish")
 
     # 👑 Agar admin bo‘lsa, qo‘shimcha tugma
     if message.from_user.username == ADMIN_USERNAME[1:]:
