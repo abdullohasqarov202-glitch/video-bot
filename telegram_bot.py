@@ -4,6 +4,8 @@ import telebot
 import yt_dlp
 import tempfile
 from datetime import datetime, timedelta
+import threading
+import time
 
 # 1️⃣ Telegram token
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
@@ -171,8 +173,8 @@ def daily_bonus(message):
         return
 
     user_last_bonus[user_id] = now
-    user_balances[user_id] = user_balances.get(user_id, 0) + 5
-    bot.send_message(message.chat.id, "🎁 Tabriklaymiz! Sizga 5 💎 bonus qo‘shildi!")
+    user_balances[user_id] = user_balances.get(user_id, 0) + 20
+    bot.send_message(message.chat.id, "🎁 Tabriklaymiz! Sizga 20 💎 bonus qo‘shildi!")
 
 
 # 📊 Statistika
@@ -251,6 +253,75 @@ def download_video(message):
 
     except Exception as e:
         bot.reply_to(message, f"❌ Xatolik: {e}")
+
+# 🌟 Haftalik Premium tizimi
+premium_users = set()
+last_week_winner = None
+
+@bot.message_handler(func=lambda message: message.text == "💎 Premium olish")
+def premium_info(message):
+    user_id = message.chat.id
+    is_premium = user_id in premium_users
+    winner_text = (
+        f"🏆 <b>Oxirgi Premium g‘olib:</b> {all_users.get(last_week_winner, 'hali yo‘q')}"
+        if last_week_winner else "🏆 Hali Premium g‘olib aniqlanmagan."
+    )
+    if is_premium:
+        bot.send_message(
+            user_id,
+            f"🌟 Siz hozir Premium foydalanuvchisiz!\n\n{winner_text}",
+            parse_mode="HTML"
+        )
+    else:
+        bot.send_message(
+            user_id,
+            f"💎 Haftada eng ko‘p olmos to‘plagan foydalanuvchi Premium oladi!\n\n{winner_text}",
+            parse_mode="HTML"
+        )
+
+def check_weekly_winner():
+    global last_week_winner
+    while True:
+        now = datetime.now()
+        if now.weekday() == 6 and now.hour == 20:  # Yakshanba 20:00
+            if not user_balances:
+                time.sleep(3600)
+                continue
+
+            winner_id = max(user_balances, key=user_balances.get)
+            winner_balance = user_balances[winner_id]
+
+            if winner_id != last_week_winner:
+                last_week_winner = winner_id
+                premium_users.add(winner_id)
+
+                bot.send_message(
+                    ADMIN_USERNAME,
+                    f"🏆 <b>Yangi haftalik g‘olib:</b> {all_users.get(winner_id, winner_id)}\n"
+                    f"💎 {winner_balance} olmos bilan Premium oldi!",
+                    parse_mode="HTML"
+                )
+
+                bot.send_message(
+                    winner_id,
+                    "🎉 Tabriklaymiz!\n"
+                    "Siz haftaning eng faol foydalanuvchisisiz!\n"
+                    "Sizga <b>Premium</b> berildi 💎🌟",
+                    parse_mode="HTML"
+                )
+
+                for uid in all_users:
+                    if uid != winner_id:
+                        bot.send_message(
+                            uid,
+                            f"🏆 Bu haftada eng faol foydalanuvchi: "
+                            f"{all_users.get(winner_id, 'bir foydalanuvchi')} — {winner_balance} 💎 bilan Premium oldi! 🌟"
+                        )
+            time.sleep(86400)
+        else:
+            time.sleep(3600)
+
+threading.Thread(target=check_weekly_winner, daemon=True).start()
 
 
 # 🧩 Flask webhook
