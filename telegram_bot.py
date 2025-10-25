@@ -118,9 +118,18 @@ def download_video(message):
                 info = ydl.extract_info(url, download=True)
                 video_path = ydl.prepare_filename(info)
 
-            caption = f"🎬 <b>{info.get('title', 'Video')}</b>\n📲 Yuklab beruvchi: <a href='https://t.me/asqarov_uzbot'>@asqarov_uzbot</a>"
+            # 🎵 Musiqa nomini olish (agar bo‘lsa)
+            music = info.get("music", None) or info.get("track", None)
+            music_text = f"\n🎵 Musiqa: {music}" if music else ""
+
+            caption = f"🎬 <b>{info.get('title', 'Video')}</b>{music_text}\n\n📲 Yuklab beruvchi: <a href='https://t.me/asqarov_uzbot'>@asqarov_uzbot</a>"
+
+            # 🔘 Tugma qo‘shish
+            markup = telebot.types.InlineKeyboardMarkup()
+            markup.add(telebot.types.InlineKeyboardButton("➕ Guruh yoki kanalga qo‘shilish", url="https://t.me/Asqarov_2007"))
+
             with open(video_path, 'rb') as v:
-                bot.send_video(message.chat.id, v, caption=caption, parse_mode='HTML')
+                bot.send_video(message.chat.id, v, caption=caption, parse_mode='HTML', reply_markup=markup)
 
     except Exception as e:
         bot.reply_to(message, f"❌ Xatolik: {e}")
@@ -143,3 +152,4 @@ def home():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
