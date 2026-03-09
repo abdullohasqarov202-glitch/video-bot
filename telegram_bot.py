@@ -8,11 +8,11 @@ import threading
 import time
 
 # 1️⃣ Telegram token
-ASQAROV = os.environ.get("C")
-if not ASQAROV:
-    raise RuntimeError("❌ TELEGRAM_TOKEN aniqlanmadi! Render environment variable orqali qo‘shing.")
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
+if not TELEGRAM_TOKEN:
+    raise RuntimeError("❌ TELEGRAM_TOKEN aniqlanmadi! Environment variable orqali qo‘shing.")
 
-bot = telebot.TeleBot(ASQAROV)
+bot = telebot.TeleBot(TELEGRAM_TOKEN)
 app = Flask(__name__)
 
 # 2️⃣ Cookie fayl
