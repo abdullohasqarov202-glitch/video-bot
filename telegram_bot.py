@@ -9,7 +9,7 @@ import time
 
 # 1️⃣ Telegram token
 ASQAROV = os.environ.get("C")
-if not TELEGRAM_TOKEN:
+if not ASQAROV:
     raise RuntimeError("❌ TELEGRAM_TOKEN aniqlanmadi! Render environment variable orqali qo‘shing.")
 
 bot = telebot.TeleBot(ASQAROV)
